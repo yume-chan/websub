@@ -1,0 +1,35 @@
+{
+  "name": "websub",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "jest",
+    "coverage": "jest --coverage",
+    "start": "webpack-dev-server"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/jest": "^24.0.11",
+    "@types/react": "^16.8.13",
+    "@types/react-dom": "^16.8.4",
+    "awesome-typescript-loader": "^5.2.1",
+    "comlinkjs": "^3.2.0",
+    "css-loader": "^2.1.1",
+    "debounce": "^1.2.0",
+    "flv.js": "^1.5.0",
+    "immer": "^3.1.1",
+    "jest": "^24.7.1",
+    "react": "^16.8.6",
+    "react-dom": "^16.8.6",
+    "style-loader": "^0.23.1",
+    "ts-jest": "^24.0.2",
+    "typescript": "^3.4.3",
+    "webpack": "^4.30.0",
+    "webpack-cli": "^3.3.0",
+    "webpack-dev-server": "^3.3.1",
+    "worker-loader": "^2.0.0"
+  }
+}
