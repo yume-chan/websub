@@ -2,6 +2,7 @@ import React from 'react';
 import Ass from './ass';
 import { AssFile } from '.';
 import parseFlv from './flv';
+import AutoResizeTextArea from './editor/auto-resize-textarea';
 
 interface FilePickerProps {
     accept?: string;
@@ -9,19 +10,25 @@ interface FilePickerProps {
 }
 
 function FilePicker(props: React.PropsWithChildren<FilePickerProps>) {
-    const onChange = React.useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleLableClick = React.useCallback((e: React.MouseEvent<HTMLLabelElement>) => {
+        if (e.currentTarget !== e.target) {
+            e.currentTarget.click();
+        }
+    }, []);
+
+    const handleInputChange = React.useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files!.length > 0) {
             props.onChange(e.target.files!.item(0)!);
         }
     }, [props.onChange]);
 
     return (
-        <label>
+        <label onClick={handleLableClick}>
             <input
                 style={{ position: 'absolute', top: -100 }}
                 type="file"
                 accept={props.accept}
-                onChange={onChange}
+                onChange={handleInputChange}
             />
             {props.children}
         </label>
@@ -55,13 +62,15 @@ export default function Welcome(props: WelcomeProps) {
         reader.readAsText(subtitle!);
     }, [props.onOk, subtitle])
 
+    const [value, setValue] = React.useState<string>('foo');
+
     return (
         <div>
             <div>
                 <span>Video:</span>
                 {props.video && props.video.name}
                 <FilePicker accept=".mp4" onChange={handleVideoSelect}>
-                    Browse...
+                    <button>Browse...</button>
                 </FilePicker>
             </div>
 
@@ -74,6 +83,12 @@ export default function Welcome(props: WelcomeProps) {
             </div>
 
             <button disabled={!props.video || !subtitle} onClick={handleOkClick}>OK</button>
+
+            <AutoResizeTextArea
+                style={{ width: 500 }}
+                value={value}
+                onChange={setValue}
+            />
         </div>
     );
 }

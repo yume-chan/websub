@@ -98,20 +98,24 @@ export class AssTime {
 }
 
 function toHex(value: number) {
-    return value.toString(16).toUpperCase().padStart(2, '0');
+    return value.toString(16).toLowerCase().padStart(2, '0');
 }
 
 export class AssColor {
     public static parse(value: string): AssColor {
-        // TODO: fix color parsing
-        const matches = ensure.regexp('AssColor.parse', value, /&H([0-9A-F]{2})([0-9A-F]{2})([0-9A-F]{2})([0-9A-F]{2})?/i, '&HBBGGRR or &HAABBGGRR');
+        try {
+            const matches = ensure.regexp('AssColor.parse', value, /&H([0-9A-F]{2})([0-9A-F]{2})([0-9A-F]{2})([0-9A-F]{2})?/i, '&HBBGGRR or &HAABBGGRR');
 
-        const a = matches.length === 4 ? Number.parseInt(matches.shift()!, 16) : 255;
-        const b = Number.parseInt(matches[0], 16);
-        const g = Number.parseInt(matches[1], 16);
-        const r = Number.parseInt(matches[2], 16);
+            const a = typeof matches[4] === 'string' ? Number.parseInt(matches.shift()!, 16) : 0;
+            const b = Number.parseInt(matches[0], 16);
+            const g = Number.parseInt(matches[1], 16);
+            const r = Number.parseInt(matches[2], 16);
 
-        return new AssColor(b, g, r, a);
+            return new AssColor(b, g, r, a);
+        } catch (e) {
+            // Aegisub treat all invalid value as black
+            return new AssColor(0, 0, 0, 0);
+        }
     }
 
     public static stringify(value: AssColor): string {
@@ -134,7 +138,7 @@ export class AssColor {
     public get r(): number { return this._r; }
     public set r(value: number) { this._r = ensure.range('r', value, 0, 255); }
 
-    public constructor(b: number, g: number, r: number, a: number = 255) {
+    public constructor(b: number, g: number, r: number, a: number = 0) {
         this.a = a;
         this.b = b;
         this.g = g;
@@ -144,7 +148,7 @@ export class AssColor {
     public toString() {
         let value = `${toHex(this._b)}${toHex(this._g)}${toHex(this._r)}`;
 
-        if (this._a !== 255) {
+        if (this._a !== 0) {
             value = `${toHex(this._a)}${value}`;
         }
 
@@ -203,7 +207,7 @@ export class AssObjectSection implements AssSection {
         }
     }
 
-    stringify(input: { [key: string]: any }): string {
+    stringify(input: any): string {
         let result: string[] = [];
 
         for (let [key, value] of Object.entries(input)) {
@@ -282,7 +286,7 @@ export class AssArraySection implements AssSection {
                 keys.push(key);
             }
         }
-        result.push(`Format: ${keys.join(', ')}`);
+        result.push(`Format: ${keys.join(',')}`);
 
         for (const item of input) {
             const line: string[] = [];
@@ -297,7 +301,7 @@ export class AssArraySection implements AssSection {
                 }
             }
 
-            result.push(`${item.type}: ${line.join(', ')}`);
+            result.push(`${item.type}: ${line.join(',')}`);
         }
 
         return result.join('\r\n');
@@ -333,14 +337,15 @@ namespace Ass {
         return result;
     }
 
-    export function stringify(input: any, definition: { [key: string]: AssSection } = defaultDefinition): string {
+    export function stringify(input: any, definitions: { [key: string]: AssSection | undefined } = defaultDefinition): string {
         const result: string[] = [];
 
         for (const [name, value] of Object.entries(input)) {
             result.push(`[${name}]`);
 
-            if (typeof definition[name] !== 'undefined') {
-                result.push(definition[name].stringify(value));
+            const definition = definitions[name];
+            if (typeof definition !== 'undefined') {
+                result.push(definition.stringify(value));
             } else {
                 result.push(AssUnknownSection.stringify(value));
             }

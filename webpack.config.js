@@ -7,7 +7,7 @@ module.exports = {
     entry: './src/index.tsx',
     output: {
         // @ts-ignore
-        path: path.resolve(__dirname, 'pub'),
+        path: path.resolve(__dirname, 'www'),
         filename: 'index.js',
     },
     resolve: {
@@ -44,7 +44,7 @@ module.exports = {
     },
     devServer: {
         host: '0.0.0.0',
-        contentBase: path.join(__dirname, 'pub'),
+        contentBase: path.join(__dirname, 'www'),
         compress: true,
         port: 9000,
     }

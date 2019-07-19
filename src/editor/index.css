@@ -6,6 +6,8 @@ html, body {
 
     background-color: #252526;
     color: rgba(204, 204, 204, 0.9);
+
+    overflow: hidden;
 }
 
 :global(#app) {
@@ -55,21 +57,34 @@ code {
 
 .table {
     flex-grow: 1;
+
+    overflow-y: auto;
 }
 
-input[type="text"] {
+textarea {
     background: transparent;
 
     border: none;
     outline: none;
 
     color: #e7e7e7;
+    font-family: sans-serif;
 
     vertical-align: top;
     line-height: 19px;
+
+    resize: none;
 }
 
 .line {
     margin: 2px auto;
     width: fit-content;
+}
+
+.line-span {
+    margin-right: 8px;
+}
+
+.line-input {
+    width: 500px;
 }

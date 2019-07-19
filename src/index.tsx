@@ -25,6 +25,7 @@ const autoSave = debounce((subtitle: AssFile) => {
 }, 1000);
 
 export default function App() {
+    const [state, setState] = React.useState<'welcome' | 'editor'>('welcome');
     const [video, setVideo] = React.useState<File | null>(null);
 
     const initialSubtitle = React.useMemo(() => {
@@ -41,19 +42,24 @@ export default function App() {
         setSubtitle(subtitle);
     }, []);
 
-    if (video === null || subtitle === null) {
+    const handleWelcomeOk = React.useCallback((subtitle: AssFile) => {
+        handleSubtitleChange(subtitle);
+        setState('editor');
+    }, [handleSubtitleChange]);
+
+    if (state === 'welcome') {
         return (
             <Welcome
                 video={video}
                 onVideoChange={setVideo}
-                onOk={handleSubtitleChange} />
+                onOk={handleWelcomeOk} />
         );
     }
 
     return (
         <Editor
-            video={video}
-            subtitle={subtitle}
+            video={video!}
+            subtitle={subtitle!}
             onSubtitleChange={handleSubtitleChange}
         />
     );

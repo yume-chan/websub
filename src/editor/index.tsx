@@ -3,6 +3,10 @@ import debounce from 'debounce';
 import produce from 'immer';
 
 import { AssFile } from '..';
+import Ass from '../ass';
+
+import AutoResizeTextArea from './auto-resize-textarea';
+
 import styles from './index.css';
 
 /**
@@ -45,6 +49,8 @@ function formatTime(value: number) {
 }
 
 interface IndexedInputProps {
+    className?: string;
+
     style?: React.CSSProperties;
 
     index: number;
@@ -56,9 +62,9 @@ interface IndexedInputProps {
     onFocus: (index: number) => void;
 }
 
-function IndexedInput(props: IndexedInputProps) {
-    const handleInputChange = React.useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-        props.onChange(props.index, e.target.value);
+const IndexedInput = React.memo(function IndexedInput(props: IndexedInputProps) {
+    const handleInputChange = React.useCallback((value: string) => {
+        props.onChange(props.index, value);
     }, [props.onChange, props.index])
 
     const handleInputFocus = props.onFocus && React.useCallback(() => {
@@ -66,15 +72,15 @@ function IndexedInput(props: IndexedInputProps) {
     }, [props.onFocus, props.index]);
 
     return (
-        <input
+        <AutoResizeTextArea
+            className={props.className}
             style={props.style}
-            type="text"
             value={props.value}
             onChange={handleInputChange}
             onFocus={handleInputFocus}
         />
     );
-}
+});
 
 interface Point {
     x: number;
@@ -183,12 +189,10 @@ export default function Editor(props: EditorProps) {
         videoRef.current!.currentTime = requested;
     }, []);
 
-    const subtitleRef = React.useRef<AssFile>(props.subtitle);
-    if (subtitleRef.current !== props.subtitle) {
-        subtitleRef.current = props.subtitle;
-    }
+    const subtitleRef = usePropRef(props, 'subtitle');
 
     const handleTextInputChange = React.useCallback((index: number, value: string) => {
+        value = value.replace(/\n/g, '\\N');
         props.onSubtitleChange(produce(subtitleRef.current, (draft) => {
             draft.Events[index].Text = value;
         }));
@@ -198,7 +202,7 @@ export default function Editor(props: EditorProps) {
 
     const handleFocusChanges = React.useCallback((index: number) => {
         setFocusIndex(index);
-    }, [props.subtitle, props.onSubtitleChange])
+    }, []);
 
     const handleKeyDown = React.useCallback((e: React.KeyboardEvent) => {
         switch (e.key) {
@@ -257,8 +261,21 @@ export default function Editor(props: EditorProps) {
         setVideoHeight(value.y);
     }, []);
 
+    const handleSaveClick = React.useCallback(() => {
+        const assString = Ass.stringify(subtitleRef.current);
+        const url = `data:text/plain,${assString}`;
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'export.ass';
+        a.click();
+    }, []);
+
     return (
         <div className={styles.container} onKeyDown={handleKeyDown}>
+            <div className={styles.toolbar}>
+                <div onClick={handleSaveClick}>Save</div>
+            </div>
+
             <div className={styles.help}>
                 <p>快捷键：</p>
                 <p><code>Ctrl+P</code>: 播放当前行的视频</p>
@@ -287,24 +304,24 @@ export default function Editor(props: EditorProps) {
                 onChange={handleTimeInputChange}
             />
 
-            <div ref={spanRef} style={{ textAlign: 'center' }} />
+            <div ref={spanRef} style={React.useMemo(() => ({ textAlign: 'center' }), [])} />
 
             {/* <canvas ref={canvasRef} /> */}
 
             <DragTracker className={styles.splitter} position={{ x: 0, y: videoHeight }} onPositionChange={handleDrag} />
 
-            <div className={styles.table} style={{ overflowY: 'auto' }}>
+            <div className={styles.table}>
                 {props.subtitle.Events.map((line, index) => (
                     <div key={index} className={styles.line}>
-                        <span style={{ marginRight: 8 }}>{line.type}</span>
-                        <span style={{ marginRight: 8 }}>{line.Start.toString()}</span>
-                        <span style={{ marginRight: 8 }}>{line.End.toString()}</span>
+                        <span className={styles['line-span']}>{line.type}</span>
+                        <span className={styles['line-span']}>{line.Start.toString()}</span>
+                        <span className={styles['line-span']}>{line.End.toString()}</span>
                         <IndexedInput
                             index={index}
-                            style={{ marginRight: 8, width: 300 }}
+                            className={styles['line-input']}
                             onChange={handleTextInputChange}
                             onFocus={handleFocusChanges}
-                            value={line.Text}
+                            value={line.Text.replace(/\\N/g, '\n')}
                         />
                     </div>
                 ))}
