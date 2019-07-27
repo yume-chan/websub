@@ -4,8 +4,10 @@ html, body {
 
     margin: 0;
 
-    background-color: #252526;
+    background-color: #1e1e1e;
+
     color: rgba(204, 204, 204, 0.9);
+    font-family: "Segoe UI";
 
     overflow: hidden;
 }
@@ -24,12 +26,6 @@ code {
     flex-direction: column;
 
     height: 100%;
-}
-
-.help {
-    position: absolute;
-    top: 0;
-    right: 0;
 }
 
 .video {

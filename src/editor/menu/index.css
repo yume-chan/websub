@@ -1,0 +1,88 @@
+.menu {
+    --menu-height: 28px;
+
+    display: flex;
+    flex-direction: row;
+
+    height: var(--menu-height);
+
+    color: #cccccc;
+    font-size: 12px;
+    line-height: var(--menu-height);
+
+    background-color: #3c3c3c;
+
+    cursor: default;
+    user-select: none;
+}
+
+.menu-item {
+    position: relative;
+
+    flex: 0 0 auto;
+
+    height: var(--menu-height);
+
+    padding: 0 12px;
+
+    outline: none !important;
+}
+
+.menu-item:hover, .menu-item.active {
+    color: #cccccc;
+    background-color: #ffffff1a;
+}
+
+.menu-item-children {
+    top: var(--menu-height);
+    left: 0;
+}
+
+.sub-menu {
+    --sub-menu-width: 250px;
+
+    position: absolute;
+
+    width: var(--sub-menu-width);
+
+    padding: 8px 0;
+
+    background-color: #252526;
+    box-shadow: 0 0 5px #000;
+}
+
+.sub-menu-item {
+    position: relative;
+}
+
+.sub-menu-item-content {
+    display: flex;
+    flex-direction: row;
+
+    width: var(--sub-menu-width);
+    height: var(--menu-height);
+
+    padding: 0 12px;
+
+    box-sizing: border-box;
+}
+
+.sub-menu-item:hover, .sub-menu-item.active {
+    color: #ffffff;
+    background-color: #094771;
+}
+
+.sub-menu-item-label {
+    flex: 1 0 auto;
+}
+
+.sub-menu-item-shortcut {
+    flex: 0 0 auto;
+
+    font-family: "Consolas";
+}
+
+.sub-menu-item-children {
+    top: -8px;
+    left: 200px;
+}

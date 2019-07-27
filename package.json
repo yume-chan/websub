@@ -13,10 +13,12 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
+    "@types/classnames": "^2.2.9",
     "@types/jest": "^24.0.15",
     "@types/react": "^16.8.23",
     "@types/react-dom": "^16.8.4",
     "awesome-typescript-loader": "^5.2.1",
+    "classnames": "^2.2.6",
     "comlinkjs": "^3.2.0",
     "css-loader": "^3.1.0",
     "debounce": "^1.2.0",

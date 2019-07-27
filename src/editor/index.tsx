@@ -6,6 +6,7 @@ import { AssFile } from '..';
 import Ass from '../ass';
 
 import AutoResizeTextArea from './auto-resize-textarea';
+import Menu from './menu';
 
 import styles from './index.css';
 
@@ -198,63 +199,156 @@ export default function Editor(props: EditorProps) {
         }));
     }, [props.onSubtitleChange])
 
-    const [focusIndex, setFocusIndex] = React.useState<number>(-1);
+    const focusIndexRef = React.useRef<number>(-1);
 
     const handleFocusChanges = React.useCallback((index: number) => {
-        setFocusIndex(index);
+        focusIndexRef.current = index;
     }, []);
 
-    const handleKeyDown = React.useCallback((e: React.KeyboardEvent) => {
+    const handlers = React.useMemo(() => ({
+        save() {
+            const assString = Ass.stringify(subtitleRef.current);
+            const url = `data:text/plain,${assString}`;
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'export.ass';
+            a.click();
+        },
+        play() {
+            if (focusIndexRef.current !== -1) {
+                const event = subtitleRef.current.Events[focusIndexRef.current];
+                videoRef.current!.currentTime = event.Start.toSeconds();
+                videoRef.current!.play();
+                setStopTime(event.End.toSeconds());
+            }
+        },
+        playExtended() {
+            if (focusIndexRef.current !== -1) {
+                const event = subtitleRef.current.Events[focusIndexRef.current];
+                videoRef.current!.currentTime = event.Start.toSeconds() - 1;
+                videoRef.current!.play();
+                setStopTime(event.End.toSeconds() + 1);
+            }
+        },
+        help() {
+            if (focusIndexRef.current !== null) {
+                handleTextInputChange(focusIndexRef.current, '（拜托了，校对桑！）');
+            }
+        },
+        slower() {
+            videoRef.current!.playbackRate -= 0.1;
+        },
+        faster() {
+            videoRef.current!.playbackRate += 0.1;
+        }
+    }), []);
+
+    const menu = React.useMemo((): Menu.ItemProps[] => ([
+        {
+            label: 'File',
+            dataSource: [
+                {
+                    label: 'Save',
+                    onClick: handlers.save,
+                },
+            ],
+        },
+        {
+            label: 'Playback',
+            dataSource: [
+                {
+                    label: 'Play current line',
+                    shortcut: [
+                        {
+                            ctrl: true,
+                            key: 'P',
+                        },
+                    ],
+                    onClick: handlers.play,
+                },
+                {
+                    label: 'Play current line ±1s',
+                    shortcut: [
+                        {
+                            ctrl: true,
+                            key: 'O',
+                        },
+                    ],
+                    onClick: handlers.playExtended,
+                },
+                {
+                    label: 'Get help',
+                    shortcut: [
+                        {
+                            ctrl: true,
+                            key: 'H',
+                        },
+                    ],
+                    onClick: handlers.help,
+                },
+                {
+                    label: '-10% playback speed',
+                    shortcut: [
+                        {
+                            ctrl: true,
+                            key: 'S',
+                        },
+                    ],
+                    onClick: handlers.slower,
+                },
+                {
+                    label: '+10% playback speed',
+                    shortcut: [
+                        {
+                            ctrl: true,
+                            key: 'D',
+                        },
+                    ],
+                    onClick: handlers.faster,
+                },
+            ]
+        }
+    ]), []);
+
+    const handleKeyDown = React.useCallback((e: Pick<React.KeyboardEvent, 'ctrlKey' | 'key' | 'preventDefault'>) => {
         switch (e.key) {
             case 'p':
             case 'P':
                 if (e.ctrlKey) {
-                    if (focusIndex !== -1) {
-                        const event = subtitleRef.current.Events[focusIndex];
-                        videoRef.current!.currentTime = event.Start.toSeconds();
-                        videoRef.current!.play();
-                        setStopTime(event.End.toSeconds());
-                        e.preventDefault();
-                    }
+                    handlers.play();
+                    e.preventDefault();
                 }
                 break;
             case 'h':
             case 'H':
                 if (e.ctrlKey) {
-                    if (focusIndex !== null) {
-                        handleTextInputChange(focusIndex, '（拜托了，校对桑！）');
-                        e.preventDefault();
-                    }
+                    handlers.help();
+                    e.preventDefault();
                 }
                 break;
             case 'o':
             case 'O':
                 if (e.ctrlKey) {
-                    if (focusIndex !== null) {
-                        const event = subtitleRef.current.Events[focusIndex];
-                        videoRef.current!.currentTime = event.Start.toSeconds() - 1;
-                        videoRef.current!.play();
-                        setStopTime(event.End.toSeconds() + 1);
-                        e.preventDefault();
-                    }
+                    handlers.playExtended();
+                    e.preventDefault();
                 }
                 break;
             case 's':
             case 'S':
                 if (e.ctrlKey) {
-                    videoRef.current!.playbackRate -= 0.1;
+                    handlers.slower();
                     e.preventDefault();
                 }
                 break;
             case 'd':
             case 'D':
                 if (e.ctrlKey) {
-                    videoRef.current!.playbackRate += 0.1;
+                    handlers.faster();
                     e.preventDefault();
                 }
                 break;
         }
-    }, [videoRef, focusIndex]);
+    }, []);
 
     const [videoHeight, setVideoHeight] = React.useState<number>(window.innerHeight / 3);
     const handleDrag = React.useCallback((value: Point) => {
@@ -272,18 +366,7 @@ export default function Editor(props: EditorProps) {
 
     return (
         <div className={styles.container} onKeyDown={handleKeyDown}>
-            <div className={styles.toolbar}>
-                <div onClick={handleSaveClick}>Save</div>
-            </div>
-
-            <div className={styles.help}>
-                <p>快捷键：</p>
-                <p><code>Ctrl+P</code>: 播放当前行的视频</p>
-                <p><code>Ctrl+O</code>: 播放当前行+前后 1 秒的视频</p>
-                <p><code>Ctrl+H</code>: 一键求助校对桑</p>
-                <p><code>Ctrl+S</code>: 播放速度 -10%</p>
-                <p><code>Ctrl+D</code>: 播放速度 +10%</p>
-            </div>
+            <Menu dataSource={menu} />
 
             <video
                 className={styles.video}
