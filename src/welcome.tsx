@@ -1,8 +1,6 @@
 import React from 'react';
 import Ass from './ass';
 import { AssFile } from '.';
-import parseFlv from './flv';
-import AutoResizeTextArea from './editor/auto-resize-textarea';
 
 interface FilePickerProps {
     accept?: string;
@@ -83,12 +81,6 @@ export default function Welcome(props: WelcomeProps) {
             </div>
 
             <button disabled={!props.video || !subtitle} onClick={handleOkClick}>OK</button>
-
-            <AutoResizeTextArea
-                style={{ width: 500 }}
-                value={value}
-                onChange={setValue}
-            />
         </div>
     );
 }
