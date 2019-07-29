@@ -35,6 +35,11 @@ export const AssNumber: AssValue = {
     stringify(value: number) { return value.toString(); }
 }
 
+export const AssText: AssValue = {
+    parse(input) { return input.replace(/\\N/g, '\n'); },
+    stringify(value: string) { return value.replace(/\n/g, '\\N'); }
+}
+
 const ensure = {
     range(name: string, value: number, min: number, max: number): number {
         if (value < min || value > max) {
@@ -104,7 +109,7 @@ function toHex(value: number) {
 export class AssColor {
     public static parse(value: string): AssColor {
         try {
-            const matches = ensure.regexp('AssColor.parse', value, /&H([0-9A-F]{2})([0-9A-F]{2})([0-9A-F]{2})([0-9A-F]{2})?/i, '&HBBGGRR or &HAABBGGRR');
+            const matches = ensure.regexp('AssColor.parse', value, /&H([0-9A-F]{2})([0-9A-F]{2})([0-9A-F]{2})([0-9A-F]{2})?&?/i, '&HBBGGRR or &HAABBGGRR');
 
             const a = typeof matches[4] === 'string' ? Number.parseInt(matches.shift()!, 16) : 0;
             const b = Number.parseInt(matches[0], 16);
@@ -408,7 +413,7 @@ namespace Ass {
             'MarginR': AssNumber,
             'MarginV': AssNumber,
             'Effect': AssString,
-            'Text': AssString,
+            'Text': AssText,
         }),
     }
 }
