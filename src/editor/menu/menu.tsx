@@ -1,19 +1,16 @@
 import React from "react";
 
-import indexed from "./indexed";
 import MenuItem from "./menu-item";
-import { cx, useMenuItemDataSource } from "./util";
+import { cx } from "./util";
+import { WithDataSourceProps, useDataSource } from "../with-data-source";
+import { indexed } from "../util";
 
-export interface MenuProps {
-    dataSource?: Menu.ItemProps[];
-
-    children?: React.ReactNode;
-}
+export interface MenuProps extends WithDataSourceProps<Menu.ItemProps> { }
 
 function Menu(props: MenuProps) {
     const IndexedMenuItem = React.useMemo(() => indexed(MenuItem), []);
 
-    const children = useMenuItemDataSource(props);
+    const children = useDataSource(props, Menu.Item);
     const [openedIndex, setOpenedIndex] = React.useState(-1);
     React.useMemo(() => {
         setOpenedIndex(-1);
@@ -34,6 +31,10 @@ function Menu(props: MenuProps) {
             original(e);
         }
     }, [children, openedIndex]);
+
+    const handleClose = React.useCallback((index: number) => {
+        setOpenedIndex(-1);
+    }, []);
 
     const handleMouseEnter = React.useCallback((index: number, e: React.MouseEvent<HTMLDivElement>) => {
         if (openedIndex !== -1 && openedIndex !== index) {
@@ -69,6 +70,7 @@ function Menu(props: MenuProps) {
                     index={index}
                     opened={index === openedIndex}
                     onClick={handleClick}
+                    onClose={handleClose}
                     onMouseEnter={handleMouseEnter}
                     onMouseLeave={handleMouseLeave}
                 />

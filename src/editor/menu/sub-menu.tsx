@@ -1,14 +1,16 @@
 import React from 'react';
 
-import indexed from './indexed';
 import SubMenuItem from './sub-menu-item';
 import Menu from './menu';
 import { cx } from './util';
+import { indexed } from '../util';
 
 export interface SubMenuProps {
     className: string;
 
     dataSource: Menu.ItemProps[];
+
+    onClose: () => void;
 }
 
 export default function SubMenu(props: SubMenuProps) {
@@ -22,6 +24,8 @@ export default function SubMenu(props: SubMenuProps) {
         timeoutId.current += 1;
         setOpenedIndex(index);
     }, []);
+
+    const handleClose = props.onClose;
 
     const handleClick = React.useCallback((index: number, e: React.MouseEvent<HTMLDivElement>) => {
         const original = props.dataSource[index].onClick;
@@ -60,6 +64,7 @@ export default function SubMenu(props: SubMenuProps) {
                         opened={index === openedIndex}
                         onClick={handleClick}
                         onOpen={handleOpen}
+                        onClose={handleClose}
                         onMouseEnter={handleMouseEnter}
                         onMouseLeave={handleMouseLeave}
                     />

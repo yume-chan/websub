@@ -9,17 +9,7 @@ import AutoResizeTextArea from './auto-resize-textarea';
 import Menu from './menu';
 
 import styles from './index.css';
-
-/**
- * Get a ref from props
- * Use in `useCallback` when your callback relies on some props
- * but you don't want to recreate the callback everytime.
- */
-function usePropRef<T, K extends keyof T>(props: T, key: K): React.MutableRefObject<T[K]> {
-    const ref = React.useRef<T[K]>();
-    ref.current = props[key];
-    return ref as React.MutableRefObject<T[K]>;
-}
+import { useValueRef, indexed } from './util';
 
 interface EditorProps {
     video: File;
@@ -63,26 +53,6 @@ interface IndexedInputProps {
     onFocus: (index: number) => void;
 }
 
-const IndexedInput = React.memo(function IndexedInput(props: IndexedInputProps) {
-    const handleInputChange = React.useCallback((value: string) => {
-        props.onChange(props.index, value);
-    }, [props.onChange, props.index])
-
-    const handleInputFocus = props.onFocus && React.useCallback(() => {
-        props.onFocus(props.index);
-    }, [props.onFocus, props.index]);
-
-    return (
-        <AutoResizeTextArea
-            className={props.className}
-            style={props.style}
-            value={props.value}
-            onChange={handleInputChange}
-            onFocus={handleInputFocus}
-        />
-    );
-});
-
 interface Point {
     x: number;
 
@@ -101,7 +71,7 @@ interface DragTrackerProps {
 
 function DragTracker(props: DragTrackerProps) {
     const lastPosition = React.useRef<{ x: number, y: number }>({ x: 0, y: 0 });
-    const positionRef = usePropRef(props, 'position');
+    const positionRef = useValueRef(props.position);
 
     const [dragging, setDragging] = React.useState<boolean>(false);
 
@@ -190,14 +160,17 @@ export default function Editor(props: EditorProps) {
         videoRef.current!.currentTime = requested;
     }, []);
 
-    const subtitleRef = usePropRef(props, 'subtitle');
+    const subtitleRef = useValueRef(props.subtitle);
 
-    const handleTextInputChange = React.useCallback((index: number, value: string) => {
-        value = value.replace(/\n/g, '\\N');
+    const changeSubtitleAt = React.useCallback((index: number, value: string) => {
         props.onSubtitleChange(produce(subtitleRef.current, (draft) => {
             draft.Events[index].Text = value;
         }));
-    }, [props.onSubtitleChange])
+    }, [props.onSubtitleChange]);
+
+    const handleTextInputChange = React.useCallback((index: number, value: string) => {
+        changeSubtitleAt(index, value);
+    }, [changeSubtitleAt])
 
     const focusIndexRef = React.useRef<number>(-1);
 
@@ -232,7 +205,7 @@ export default function Editor(props: EditorProps) {
         },
         help() {
             if (focusIndexRef.current !== null) {
-                handleTextInputChange(focusIndexRef.current, '（拜托了，校对桑！）');
+                changeSubtitleAt(focusIndexRef.current, '（拜托了，校对桑！）');
             }
         },
         slower() {
@@ -241,7 +214,7 @@ export default function Editor(props: EditorProps) {
         faster() {
             videoRef.current!.playbackRate += 0.1;
         }
-    }), []);
+    }), [changeSubtitleAt]);
 
     const menu = React.useMemo((): Menu.ItemProps[] => ([
         {
@@ -355,14 +328,7 @@ export default function Editor(props: EditorProps) {
         setVideoHeight(value.y);
     }, []);
 
-    const handleSaveClick = React.useCallback(() => {
-        const assString = Ass.stringify(subtitleRef.current);
-        const url = `data:text/plain,${assString}`;
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'export.ass';
-        a.click();
-    }, []);
+    const IndexedInput = React.useMemo(() => indexed(AutoResizeTextArea), []);
 
     return (
         <div className={styles.container} onKeyDown={handleKeyDown}>
@@ -404,7 +370,7 @@ export default function Editor(props: EditorProps) {
                             className={styles['line-input']}
                             onChange={handleTextInputChange}
                             onFocus={handleFocusChanges}
-                            value={line.Text.replace(/\\N/g, '\n')}
+                            value={line.Text}
                         />
                     </div>
                 ))}

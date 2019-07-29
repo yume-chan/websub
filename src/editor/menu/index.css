@@ -7,7 +7,7 @@
     height: var(--menu-height);
 
     color: #cccccc;
-    font-size: 12px;
+    font-size: 14px;
     line-height: var(--menu-height);
 
     background-color: #3c3c3c;
@@ -34,7 +34,7 @@
 }
 
 .menu-item-children {
-    top: var(--menu-height);
+    top: calc(var(--menu-height) + 2px);
     left: 0;
 }
 

@@ -3,7 +3,8 @@ import React from "react";
 import Menu from "./menu";
 import { MenuItemProps } from "./menu-item";
 import SubMenu from "./sub-menu";
-import { useMenuItemDataSource, cx } from "./util";
+import { cx } from "./util";
+import { useDataSource } from "../with-data-source";
 
 export function renderShortcut(shortcut: Menu.KeyboardShortcut) {
     const parts: string[] = [];
@@ -29,10 +30,26 @@ export interface SubMenuItemProps extends MenuItemProps {
     active: boolean;
 
     onOpen: () => void;
+
+    onClose: () => void;
+}
+
+function useChainCallback<T extends any[]>(
+    ...callbacks: (((...args: T) => void) | undefined)[]):
+    (...args: T) => void {
+    return React.useCallback((...args: T): void => {
+        for (const callback of callbacks) {
+            if (typeof callback !== 'undefined') {
+                callback(...args);
+            }
+        }
+    }, callbacks);
 }
 
 export default React.memo(function SubMenuItem(props: SubMenuItemProps) {
-    const children = useMenuItemDataSource(props);
+    const children = useDataSource(props, Menu.Item);
+
+    const handleClick = useChainCallback(props.onClick, props.onClose);
 
     const extra = React.useMemo(() => {
         if (children.length !== 0) {
@@ -54,7 +71,7 @@ export default React.memo(function SubMenuItem(props: SubMenuItemProps) {
         <div className={cx('sub-menu-item', children.length !== 0 && props.active && 'active')}>
             <div
                 className={cx('sub-menu-item-content')}
-                onClick={children.length !== 0 ? props.onOpen : props.onClick}
+                onClick={children.length !== 0 ? props.onOpen : handleClick}
                 onMouseEnter={props.onMouseEnter}
                 onMouseLeave={props.onMouseLeave}
             >
@@ -67,7 +84,11 @@ export default React.memo(function SubMenuItem(props: SubMenuItemProps) {
 
             {
                 children.length !== 0 && props.opened && (
-                    <SubMenu className="sub-menu-item-children" dataSource={children} />
+                    <SubMenu
+                        className="sub-menu-item-children"
+                        dataSource={children}
+                        onClose={props.onClose}
+                    />
                 )
             }
         </div>
