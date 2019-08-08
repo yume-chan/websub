@@ -13,6 +13,7 @@ export interface AutoResizeTextAreaProps {
 export default function AutoResizeTextArea(props: AutoResizeTextAreaProps) {
     const [width, setWidth] = React.useState<number>(0);
     const [height, setHeight] = React.useState<number>(0);
+    const [fontSize, setFontSize] = React.useState<number>(0);
 
     const handleTextAreaChange = React.useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
         props.onChange(e.target.value);
@@ -27,9 +28,12 @@ export default function AutoResizeTextArea(props: AutoResizeTextAreaProps) {
             return;
         }
 
+        const style = getComputedStyle(textAreaRef.current!);
+        setFontSize(Number.parseFloat(style.fontSize!));
+
         const height = divRef.current!.getBoundingClientRect().height;
-        setHeight(height);
-    }, [props.value, width]);
+        setHeight(height + Number.parseFloat(style.paddingTop!) + Number.parseFloat(style.paddingBottom!));
+    }, [props.value, width, fontSize]);
 
     const divStyle = React.useMemo(() => ({
         ...props.style,
@@ -41,7 +45,8 @@ export default function AutoResizeTextArea(props: AutoResizeTextAreaProps) {
         whiteSpace: 'pre-wrap',
         opacity: 0,
         pointerEvents: 'none',
-    } as React.CSSProperties), [props.style, width]);
+        fontSize,
+    } as React.CSSProperties), [props.style, width, fontSize]);
 
     const divContent = React.useMemo(() => {
         if (props.value === '') {
