@@ -1,7 +1,7 @@
 export class LineReader {
     private _lines: string[];
 
-    private _index: number = 0;
+    private _index = 0;
 
     public get isEof(): boolean { return this._index === this._lines.length; }
 
@@ -14,28 +14,28 @@ export class LineReader {
     }
 }
 
-export interface AssValue {
-    parse(input: string): any;
+export interface AssValue<T> {
+    parse(input: string): T;
 
-    stringify(value: any): string;
+    stringify(value: T): string;
 }
 
-export const AssString: AssValue = {
+export const AssString: AssValue<string> = {
     parse(input) { return input; },
     stringify(value: string) { return value; }
 }
 
-export const AssBoolean: AssValue = {
+export const AssBoolean: AssValue<boolean> = {
     parse(input) { return input === '-1'; },
     stringify(value: boolean) { return value ? '-1' : '0'; }
 }
 
-export const AssNumber: AssValue = {
+export const AssNumber: AssValue<number> = {
     parse(input) { return Number.parseFloat(input); },
     stringify(value: number) { return value.toString(); }
 }
 
-export const AssText: AssValue = {
+export const AssText: AssValue<string> = {
     parse(input) { return input.replace(/\\N/g, '\n'); },
     stringify(value: string) { return value.replace(/\n/g, '\\N'); }
 }
@@ -86,23 +86,23 @@ export class AssTime {
     public get hundredSeconds(): number { return this._hundredthSeconds; }
     public set hundredSeconds(value: number) { this._hundredthSeconds = ensure.range('hundredSeconds', value, 0, 99); }
 
-    public constructor(hundredSeconds: number, seconds: number = 0, minutes: number = 0, hours: number = 0) {
+    public constructor(hundredSeconds: number, seconds = 0, minutes = 0, hours = 0) {
         this.hundredSeconds = hundredSeconds;
         this.seconds = seconds;
         this.minutes = minutes;
         this.hours = hours;
     }
 
-    public toSeconds() {
+    public toSeconds(): number {
         return this.hours * 3600 + this._minutes * 60 + this._seconds + this._hundredthSeconds / 100;
     }
 
-    public toString() {
+    public toString(): string {
         return `${this.hours}:${this._minutes.toString().padStart(2, '0')}:${this._seconds.toString().padStart(2, '0')}.${this._hundredthSeconds.toString().padStart(2, '0')}`
     }
 }
 
-function toHex(value: number) {
+function toHex(value: number): string {
     return value.toString(16).toLowerCase().padStart(2, '0');
 }
 
@@ -150,7 +150,7 @@ export class AssColor {
         this.r = r;
     }
 
-    public toString() {
+    public toString(): string {
         let value = `${toHex(this._b)}${toHex(this._g)}${toHex(this._r)}`;
 
         if (this._a !== 0) {
@@ -183,37 +183,38 @@ function splitWithLimit(text: string, splitter: string, count: number): string[]
 }
 
 export class AssObjectSection implements AssSection {
-    private _keys: { [key: string]: AssValue };
+    private _keys: { [key: string]: AssValue<unknown> };
 
-    public constructor(keys: { [key: string]: AssValue }) {
+    public constructor(keys: { [key: string]: AssValue<unknown> }) {
         this._keys = keys;
     }
 
-    parse(name: string, reader: LineReader, file: any): void {
-        const result: any = {};
-        file[name] = result;
+    parse(name: string, reader: LineReader, file: object): void {
+        const result: Record<string, unknown> = {};
+        Object.assign(file, { [name]: result });
 
         while (!reader.isEof) {
             const line = reader.next();
             if (line === '') {
-                return result;
+                return;
             }
 
             if (line.startsWith(';')) {
                 continue;
             }
 
-            let [key, value] = splitWithLimit(line, ':', 2);
-            if (typeof this._keys[key] !== 'undefined') {
-                value = this._keys[key].parse(value);
-            }
+            const [key, value] = splitWithLimit(line, ':', 2);
 
-            result[key] = value;
+            if (this._keys[key] !== undefined) {
+                result[key] = this._keys[key].parse(value);
+            } else {
+                result[key] = value;
+            }
         }
     }
 
-    stringify(input: any): string {
-        let result: string[] = [];
+    stringify(input: Record<string, unknown>): string {
+        const result: string[] = [];
 
         for (let [key, value] of Object.entries(input)) {
             if (typeof this._keys[key] !== 'undefined') {
@@ -228,23 +229,23 @@ export class AssObjectSection implements AssSection {
 }
 
 export interface AssSection {
-    parse(name: string, reader: LineReader, file: any): void;
+    parse(name: string, reader: LineReader, file: object): void;
 
-    stringify(input: any): string;
+    stringify(input: unknown): string;
 }
 
 export class AssArraySection implements AssSection {
-    private _keys: { [key: string]: AssValue };
+    private _keys: { [key: string]: AssValue<unknown> };
 
-    public constructor(keys: { [key: string]: AssValue }) {
+    public constructor(keys: { [key: string]: AssValue<unknown> }) {
         this._keys = keys;
     }
 
-    public parse(name: string, reader: LineReader, file: any): void {
-        const result: any[] = [];
+    public parse(name: string, reader: LineReader, file: Record<string, unknown>): void {
+        const result: Record<string, unknown>[] = [];
         file[name] = result;
 
-        let format: any;
+        let format: string[] | undefined;
 
         while (!reader.isEof) {
             const line = reader.next();
@@ -263,26 +264,27 @@ export class AssArraySection implements AssSection {
                 continue;
             }
 
-            if (typeof format === 'undefined') {
+            if (format === undefined) {
                 throw new Error('invalid format');
             }
 
-            const object: any = { type: key };
+            const object: Record<string, unknown> = { type: key };
             result.push(object);
 
             const list = splitWithLimit(value, ',', format.length);
             list.forEach((item, index) => {
-                const key = format[index];
-                if (typeof this._keys[key] !== 'undefined') {
-                    item = this._keys[key].parse(item);
-                }
+                const key = format![index];
 
-                object[key] = item;
+                if (this._keys[key] !== undefined) {
+                    object[key] = this._keys[key].parse(item);
+                } else {
+                    object[key] = item;
+                }
             });
         }
     }
 
-    public stringify(input: any[]): string {
+    public stringify(input: Record<string, unknown>[]): string {
         const result: string[] = [];
         const keys: string[] = [];
 
@@ -302,7 +304,7 @@ export class AssArraySection implements AssSection {
                 if (typeof this._keys[key] !== 'undefined') {
                     line.push(this._keys[key].stringify(value));
                 } else {
-                    line.push(value);
+                    line.push(`${value}`);
                 }
             }
 
@@ -315,107 +317,118 @@ export class AssArraySection implements AssSection {
 
 const AssUnknownSection = new AssObjectSection({});
 
-namespace Ass {
-    export function parse(input: string, definition: { [key: string]: AssSection } = defaultDefinition): any {
-        const reader = new LineReader(input);
-        const result: any = {};
+const defaultDefinition: { [key: string]: AssSection } = {
+    'Script Info': new AssObjectSection({
+        'Title': AssString,
+        'Original Script': AssString,
+        'Original Translation': AssString,
+        'Original Editing': AssString,
+        'Original Timing': AssString,
+        'Script Updated By': AssString,
+        'Update Details': AssString,
+        'ScriptType': AssString,
+        'Collisions': AssString,
+        'PlayResY': AssNumber,
+        'PlayResX': AssNumber,
+        'PlayDepth': AssNumber,
+        'Timer': AssNumber,
+        'WrapStyle': AssNumber,
+    }),
+    'V4+ Styles': new AssArraySection({
+        'Name': AssString,
+        'Fontname': AssString,
+        'Fontsize': AssNumber,
+        'PrimaryColour': AssColor,
+        'SecondaryColour': AssColor,
+        'OutlineColour': AssColor,
+        'BackColour': AssColor,
+        'Bold': AssBoolean,
+        'Italic': AssBoolean,
+        'Underline': AssBoolean,
+        'StrikeOut': AssBoolean,
+        'ScaleX': AssNumber,
+        'ScaleY': AssNumber,
+        'Spacing': AssNumber,
+        'Angle': AssNumber,
+        'BorderStyle': AssNumber,
+        'Outline': AssNumber,
+        'Shadow': AssNumber,
+        'Alignment': AssNumber,
+        'MarginL': AssNumber,
+        'MarginR': AssNumber,
+        'MarginV': AssNumber,
+    }),
+    'Events': new AssArraySection({
+        'Marked': AssNumber,
+        'Layer': AssNumber,
+        'Start': AssTime,
+        'End': AssTime,
+        'Style': AssString,
+        'Name': AssString,
+        'MarginL': AssNumber,
+        'MarginR': AssNumber,
+        'MarginV': AssNumber,
+        'Effect': AssString,
+        'Text': AssText,
+    }),
+};
 
-        while (!reader.isEof) {
-            const line = reader.next();
-            if (line === '') {
-                continue;
-            }
+function parse(
+    input: string,
+    definition: { [key: string]: AssSection } = defaultDefinition
+): object {
+    const reader = new LineReader(input);
+    const result: object = {};
 
-            if (!line.startsWith('[')) {
-                throw new Error('invalid format');
-            }
-
-            const name = line.substring(1, line.length - 1);
-
-            if (typeof definition[name] !== 'undefined') {
-                definition[name].parse(name, reader, result);
-            } else {
-                AssUnknownSection.parse(name, reader, result);
-            }
+    while (!reader.isEof) {
+        const line = reader.next();
+        if (line === '') {
+            continue;
         }
 
-        return result;
-    }
-
-    export function stringify(input: any, definitions: { [key: string]: AssSection | undefined } = defaultDefinition): string {
-        const result: string[] = [];
-
-        for (const [name, value] of Object.entries(input)) {
-            result.push(`[${name}]`);
-
-            const definition = definitions[name];
-            if (typeof definition !== 'undefined') {
-                result.push(definition.stringify(value));
-            } else {
-                result.push(AssUnknownSection.stringify(value));
-            }
-
-            result.push('');
+        if (!line.startsWith('[')) {
+            throw new Error('invalid format');
         }
 
-        return result.join('\r\n');
+        const name = line.substring(1, line.length - 1);
+
+        if (typeof definition[name] !== 'undefined') {
+            definition[name].parse(name, reader, result);
+        } else {
+            AssUnknownSection.parse(name, reader, result);
+        }
     }
 
-    export const defaultDefinition: { [key: string]: AssSection } = {
-        'Script Info': new AssObjectSection({
-            'Title': AssString,
-            'Original Script': AssString,
-            'Original Translation': AssString,
-            'Original Editing': AssString,
-            'Original Timing': AssString,
-            'Script Updated By': AssString,
-            'Update Details': AssString,
-            'ScriptType': AssString,
-            'Collisions': AssString,
-            'PlayResY': AssNumber,
-            'PlayResX': AssNumber,
-            'PlayDepth': AssNumber,
-            'Timer': AssNumber,
-            'WrapStyle': AssNumber,
-        }),
-        'V4+ Styles': new AssArraySection({
-            'Name': AssString,
-            'Fontname': AssString,
-            'Fontsize': AssNumber,
-            'PrimaryColour': AssColor,
-            'SecondaryColour': AssColor,
-            'OutlineColour': AssColor,
-            'BackColour': AssColor,
-            'Bold': AssBoolean,
-            'Italic': AssBoolean,
-            'Underline': AssBoolean,
-            'StrikeOut': AssBoolean,
-            'ScaleX': AssNumber,
-            'ScaleY': AssNumber,
-            'Spacing': AssNumber,
-            'Angle': AssNumber,
-            'BorderStyle': AssNumber,
-            'Outline': AssNumber,
-            'Shadow': AssNumber,
-            'Alignment': AssNumber,
-            'MarginL': AssNumber,
-            'MarginR': AssNumber,
-            'MarginV': AssNumber,
-        }),
-        'Events': new AssArraySection({
-            'Marked': AssNumber,
-            'Layer': AssNumber,
-            'Start': AssTime,
-            'End': AssTime,
-            'Style': AssString,
-            'Name': AssString,
-            'MarginL': AssNumber,
-            'MarginR': AssNumber,
-            'MarginV': AssNumber,
-            'Effect': AssString,
-            'Text': AssText,
-        }),
-    }
+    return result;
 }
+
+function stringify(
+    input: object,
+    definitions: { [key: string]: AssSection | undefined } = defaultDefinition
+): string {
+    const result: string[] = [];
+
+    for (const [name, value] of Object.entries(input)) {
+        result.push(`[${name}]`);
+
+        const definition = definitions[name];
+        if (definition !== undefined) {
+            result.push(definition.stringify(value));
+        } else {
+            // TODO: is it possible that `value` is an array?
+            result.push(AssUnknownSection.stringify(value as Record<string, unknown>));
+        }
+
+        result.push('');
+    }
+
+    return result.join('\r\n');
+}
+
+const Ass = {
+    parse,
+    stringify,
+    defaultDefinition,
+};
 
 export default Ass;

@@ -27,4 +27,5 @@ expose(worker, self);
 declare interface WorkerLoaderExport {
     new(): Worker;
 }
-export default undefined as any as WorkerLoaderExport;
+declare const _export: WorkerLoaderExport;
+export default _export;

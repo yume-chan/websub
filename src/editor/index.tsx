@@ -9,7 +9,7 @@ import AutoResizeTextArea from './auto-resize-textarea';
 import Menu from './menu';
 
 import styles from './index.css';
-import { useValueRef, indexed } from './util';
+import { useValueRef, withIndex } from './util';
 
 interface EditorProps {
     video: File;
@@ -19,7 +19,7 @@ interface EditorProps {
     onSubtitleChange: (value: AssFile) => void;
 }
 
-function formatTime(value: number) {
+function formatTime(value: number): string {
     let result = '';
 
     const hundredthSeconds = value % 1;
@@ -39,20 +39,6 @@ function formatTime(value: number) {
     return result;
 }
 
-interface IndexedInputProps {
-    className?: string;
-
-    style?: React.CSSProperties;
-
-    index: number;
-
-    value: string;
-
-    onChange: (index: number, value: string) => void;
-
-    onFocus: (index: number) => void;
-}
-
 interface Point {
     x: number;
 
@@ -69,22 +55,27 @@ interface DragTrackerProps {
     onPositionChange: (value: Point) => void;
 }
 
-function DragTracker(props: DragTrackerProps) {
-    const lastPosition = React.useRef<{ x: number, y: number }>({ x: 0, y: 0 });
+function DragTracker(props: DragTrackerProps): JSX.Element {
+    const { onPositionChange } = props;
+
+    const lastPosition = React.useRef<{ x: number; y: number }>({ x: 0, y: 0 });
     const positionRef = useValueRef(props.position);
 
     const [dragging, setDragging] = React.useState<boolean>(false);
 
     const handleMouseMove = React.useCallback((e: MouseEvent) => {
-        props.onPositionChange({
+        onPositionChange({
             x: positionRef.current.x + e.pageX - lastPosition.current.y,
             y: positionRef.current.y + e.pageY - lastPosition.current.y,
         });
         lastPosition.current.x = e.pageX;
         lastPosition.current.y = e.pageY;
-    }, [props.onPositionChange]);
+    }, [onPositionChange, positionRef]);
 
     const handleMouseUp = React.useCallback((e: MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+
         setDragging(false);
     }, []);
 
@@ -92,7 +83,7 @@ function DragTracker(props: DragTrackerProps) {
         if (dragging) {
             document.addEventListener('mousemove', handleMouseMove);
 
-            return () => {
+            return (): void => {
                 document.removeEventListener('mousemove', handleMouseMove);
             };
         }
@@ -104,13 +95,13 @@ function DragTracker(props: DragTrackerProps) {
         if (dragging !== null) {
             document.addEventListener('mouseup', handleMouseUp);
 
-            return () => {
+            return (): void => {
                 document.removeEventListener('mouseup', handleMouseUp);
             };
         }
 
         return undefined;
-    }, [dragging])
+    }, [dragging, handleMouseUp])
 
     const handleMouseDown = React.useCallback((e: React.MouseEvent) => {
         lastPosition.current.x = e.pageX;
@@ -123,10 +114,18 @@ function DragTracker(props: DragTrackerProps) {
     )
 }
 
-export default function Editor(props: EditorProps) {
-    const videoUrl = React.useMemo(() => {
-        return URL.createObjectURL(props.video);
-    }, [props.video]);
+export default function Editor(props: EditorProps): JSX.Element {
+    const { video, onSubtitleChange } = props;
+
+    const [videoUrl, setVideoUrl] = React.useState<string>();
+    React.useEffect(() => {
+        const url = window.URL.createObjectURL(video);
+        setVideoUrl(url);
+
+        return (): void => {
+            window.URL.revokeObjectURL(url);
+        };
+    }, [video]);
 
     const videoRef = React.useRef<HTMLVideoElement>(null);
     const timeInputRef = React.useRef<HTMLInputElement>(null);
@@ -149,7 +148,7 @@ export default function Editor(props: EditorProps) {
         }
 
         updateTimeDisplay(time);
-    }, [stopTime]);
+    }, [stopTime, updateTimeDisplay]);
 
     const handleTimeInputChange = React.useCallback(() => {
         const requested = timeInputRef.current!.valueAsNumber * videoRef.current!.duration;
@@ -163,10 +162,10 @@ export default function Editor(props: EditorProps) {
     const subtitleRef = useValueRef(props.subtitle);
 
     const changeSubtitleAt = React.useCallback((index: number, value: string) => {
-        props.onSubtitleChange(produce(subtitleRef.current, (draft) => {
+        onSubtitleChange(produce(subtitleRef.current, (draft) => {
             draft.Events[index].Text = value;
         }));
-    }, [props.onSubtitleChange]);
+    }, [onSubtitleChange, subtitleRef]);
 
     const handleTextInputChange = React.useCallback((index: number, value: string) => {
         changeSubtitleAt(index, value);
@@ -179,7 +178,7 @@ export default function Editor(props: EditorProps) {
     }, []);
 
     const handlers = React.useMemo(() => ({
-        save() {
+        save(): void {
             const assString = Ass.stringify(subtitleRef.current);
             const url = `data:text/plain,${assString}`;
             const a = document.createElement('a');
@@ -187,7 +186,7 @@ export default function Editor(props: EditorProps) {
             a.download = 'export.ass';
             a.click();
         },
-        play() {
+        play(): void {
             if (focusIndexRef.current !== -1) {
                 const event = subtitleRef.current.Events[focusIndexRef.current];
                 videoRef.current!.currentTime = event.Start.toSeconds();
@@ -195,7 +194,7 @@ export default function Editor(props: EditorProps) {
                 setStopTime(event.End.toSeconds());
             }
         },
-        playExtended() {
+        playExtended(): void {
             if (focusIndexRef.current !== -1) {
                 const event = subtitleRef.current.Events[focusIndexRef.current];
                 videoRef.current!.currentTime = event.Start.toSeconds() - 1;
@@ -203,18 +202,18 @@ export default function Editor(props: EditorProps) {
                 setStopTime(event.End.toSeconds() + 1);
             }
         },
-        help() {
+        help(): void {
             if (focusIndexRef.current !== null) {
                 changeSubtitleAt(focusIndexRef.current, '（拜托了，校对桑！）');
             }
         },
-        slower() {
+        slower(): void {
             videoRef.current!.playbackRate -= 0.1;
         },
-        faster() {
+        faster(): void {
             videoRef.current!.playbackRate += 0.1;
         }
-    }), [changeSubtitleAt]);
+    }), [changeSubtitleAt, subtitleRef]);
 
     const menu = React.useMemo((): Menu.ItemProps[] => ([
         {
@@ -281,9 +280,9 @@ export default function Editor(props: EditorProps) {
                 },
             ]
         }
-    ]), []);
+    ]), [handlers]);
 
-    const handleKeyDown = React.useCallback((e: Pick<React.KeyboardEvent, 'ctrlKey' | 'key' | 'preventDefault'>) => {
+    const handleKeyDown = React.useCallback((e: React.KeyboardEvent) => {
         switch (e.key) {
             case 'p':
             case 'P':
@@ -321,14 +320,14 @@ export default function Editor(props: EditorProps) {
                 }
                 break;
         }
-    }, []);
+    }, [handlers]);
 
     const [videoHeight, setVideoHeight] = React.useState<number>(window.innerHeight / 3);
     const handleDrag = React.useCallback((value: Point) => {
         setVideoHeight(value.y);
     }, []);
 
-    const IndexedInput = React.useMemo(() => indexed(AutoResizeTextArea), []);
+    const IndexedInput = React.useMemo(() => withIndex(AutoResizeTextArea), []);
 
     return (
         <div className={styles.container} onKeyDown={handleKeyDown}>

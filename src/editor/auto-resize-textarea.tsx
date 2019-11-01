@@ -10,14 +10,16 @@ export interface AutoResizeTextAreaProps {
     onFocus?: () => void;
 }
 
-export default function AutoResizeTextArea(props: AutoResizeTextAreaProps) {
+export default function AutoResizeTextArea(props: AutoResizeTextAreaProps): JSX.Element {
+    const { onChange } = props;
+
     const [width, setWidth] = React.useState<number>(0);
     const [height, setHeight] = React.useState<number>(0);
     const [fontSize, setFontSize] = React.useState<number>(0);
 
     const handleTextAreaChange = React.useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
-        props.onChange(e.target.value);
-    }, [props.onChange]);
+        onChange(e.target.value);
+    }, [onChange]);
 
     const textAreaRef = React.useRef<HTMLTextAreaElement | null>(null);
     const divRef = React.useRef<HTMLDivElement | null>(null);

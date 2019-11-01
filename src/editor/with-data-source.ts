@@ -17,13 +17,15 @@ export function isNodeType<T>(
 
 export function useDataSource<T>(
     props: WithDataSourceProps<T>,
-    nodeType: React.ComponentType<T>)
-    : T[] {
+    nodeType: React.ComponentType<T>
+): T[] {
+    const { dataSource, children } = props;
+
     return React.useMemo(() => {
-        if (props.dataSource) {
-            return props.dataSource;
-        } else if (props.children) {
-            return React.Children.map(props.children, node => {
+        if (dataSource) {
+            return dataSource;
+        } else if (children) {
+            return React.Children.map(children, node => {
                 if (!isNodeType(node, nodeType)) {
                     throw new Error('wrong children');
                 }
@@ -33,5 +35,5 @@ export function useDataSource<T>(
         } else {
             return [];
         }
-    }, [props.dataSource, props.children]);
+    }, [dataSource, children, nodeType]);
 }

@@ -1,4 +1,5 @@
 import React from 'react';
+
 import Ass from './ass';
 import { AssFile } from '.';
 
@@ -7,7 +8,9 @@ interface FilePickerProps {
     onChange: (file: File) => void;
 }
 
-function FilePicker(props: React.PropsWithChildren<FilePickerProps>) {
+function FilePicker(props: React.PropsWithChildren<FilePickerProps>): JSX.Element {
+    const { onChange } = props;
+
     const handleLableClick = React.useCallback((e: React.MouseEvent<HTMLLabelElement>) => {
         if (e.currentTarget !== e.target) {
             e.currentTarget.click();
@@ -16,9 +19,9 @@ function FilePicker(props: React.PropsWithChildren<FilePickerProps>) {
 
     const handleInputChange = React.useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files!.length > 0) {
-            props.onChange(e.target.files!.item(0)!);
+            onChange(e.target.files!.item(0)!);
         }
-    }, [props.onChange]);
+    }, [onChange]);
 
     return (
         <label onClick={handleLableClick}>
@@ -40,13 +43,15 @@ interface WelcomeProps {
     onOk: (subtitle: AssFile) => void;
 }
 
-export default function Welcome(props: WelcomeProps) {
+export default function Welcome(props: WelcomeProps): JSX.Element {
+    const { onVideoChange, onOk } = props;
+
     const [subtitle, setSubtitle] = React.useState<File | null>(null);
 
     const handleVideoSelect = React.useCallback((file: File) => {
-        props.onVideoChange(file);
+        onVideoChange(file);
         // parseFlv(file);
-    }, [props.onVideoChange]);
+    }, [onVideoChange]);
 
     const handleSubtitleSelect = React.useCallback((file: File) => {
         setSubtitle(file);
@@ -54,13 +59,11 @@ export default function Welcome(props: WelcomeProps) {
 
     const handleOkClick = React.useCallback(() => {
         const reader = new FileReader();
-        reader.onload = () => {
-            props.onOk(Ass.parse(reader.result as string));
+        reader.onload = (): void => {
+            onOk(Ass.parse(reader.result as string));
         };
         reader.readAsText(subtitle!);
-    }, [props.onOk, subtitle])
-
-    const [value, setValue] = React.useState<string>('foo');
+    }, [onOk, subtitle])
 
     return (
         <div>

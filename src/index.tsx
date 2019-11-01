@@ -24,14 +24,14 @@ const autoSave = debounce((subtitle: AssFile) => {
     localStorage.setItem('ass', Ass.stringify(subtitle));
 }, 1000);
 
-export default function App() {
+export default function App(): JSX.Element {
     const [state, setState] = React.useState<'welcome' | 'editor'>('welcome');
     const [video, setVideo] = React.useState<File | null>(null);
 
     const initialSubtitle = React.useMemo(() => {
         const value = localStorage.getItem('ass');
         if (value !== null) {
-            return Ass.parse(value);
+            return Ass.parse(value) as AssFile;
         }
         return null;
     }, []);
@@ -52,7 +52,8 @@ export default function App() {
             <Welcome
                 video={video}
                 onVideoChange={setVideo}
-                onOk={handleWelcomeOk} />
+                onOk={handleWelcomeOk}
+            />
         );
     }
 

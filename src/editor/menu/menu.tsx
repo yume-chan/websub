@@ -3,12 +3,12 @@ import React from "react";
 import MenuItem from "./menu-item";
 import { cx } from "./util";
 import { WithDataSourceProps, useDataSource } from "../with-data-source";
-import { indexed } from "../util";
+import { withIndex } from "../util";
 
 export interface MenuProps extends WithDataSourceProps<Menu.ItemProps> { }
 
 function Menu(props: MenuProps) {
-    const IndexedMenuItem = React.useMemo(() => indexed(MenuItem), []);
+    const IndexedMenuItem = React.useMemo(() => withIndex(MenuItem), []);
 
     const children = useDataSource(props, Menu.Item);
     const [openedIndex, setOpenedIndex] = React.useState(-1);

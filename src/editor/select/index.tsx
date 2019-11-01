@@ -5,10 +5,10 @@ import { WithDataSourceProps, useDataSource } from '../with-data-source';
 export interface SelectProps extends WithDataSourceProps<Select.ItemProps> {
     value: string;
 
-    onChange: (value: string, item: any) => void;
+    onChange: (value: string, item: unknown) => void;
 }
 
-function Select(props: SelectProps) {
+function Select(props: SelectProps): JSX.Element {
     const children = useDataSource(props, Select.Item);
     const selected = React.useMemo(() => {
         const selected = children.find(x => x.value === props.value)
@@ -30,7 +30,7 @@ function Select(props: SelectProps) {
 
     return (
         <div>
-            <div>{selected && selected.label}</div>
+            <div onClick={handleClick}>{selected && selected.label}</div>
         </div>
     )
 }

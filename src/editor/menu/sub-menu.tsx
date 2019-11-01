@@ -3,7 +3,7 @@ import React from 'react';
 import SubMenuItem from './sub-menu-item';
 import Menu from './menu';
 import { cx } from './util';
-import { indexed } from '../util';
+import { withIndex } from '../util';
 
 export interface SubMenuProps {
     className: string;
@@ -14,7 +14,7 @@ export interface SubMenuProps {
 }
 
 export default function SubMenu(props: SubMenuProps) {
-    const IndexedSubMenuItem = React.useMemo(() => indexed(SubMenuItem), []);
+    const IndexedSubMenuItem = React.useMemo(() => withIndex(SubMenuItem), []);
 
     const [activeIndex, setActiveIndex] = React.useState(-1);
     const [openedIndex, setOpenedIndex] = React.useState(-1);
